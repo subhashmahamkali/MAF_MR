@@ -11,24 +11,50 @@ output:
 
 Note that you have to learn how to use `markdown` for the text chunk
 
-```{r}
+## Normalize path
+
+```{r setup, echo=FALSE}
 knitr::opts_chunk$set(echo = TRUE) 
 knitr::opts_knit$set(root.dir=normalizePath('../../')) 
+#library(tidyverse)
 ```
 
 
+# Data description
 
+In this dataset, we have n=1503 individuals and n=1094 SNPs
+The SNP coding here is 0,1,2 and "-" indicates NA
 
 ```{r, eval=TRUE}
 data <- read.csv("data/ng_rice_snp.csv")
+```
 
-#Calculating the missing rate
+
+## Calculating the missing rate
+
+
+```{r}
 missing_count = rowSums(data[, -1] == "-") #adding all the occurances of "-" per each row.
 total_individuals = ncol(data) - 1 #calculating number of individual samples we have.
 missing_rate = missing_count / total_individuals
-data$missing_rate = missing_rate#creating a new column missing rate back in sheet.
+
+# Create a output data.frame
+out <- data[, 1:2]
+out$missing_rate = missing_rate #creating a new column missing rate back in sheet.
+```
+
+visualize the missing rate results
+
+```{r}
+pdf("graphs/missing_rate.pdf", height=5, width=5)
+hist(out$missing_rate, breaks=50, col="red", xlab="SNP missing Rate", main="Missing Rate")
+dev.off()
+```
+
 
 #calculating MAF
+
+```{r}
 #creating a function to calculate MAF
 calculate_maf = function(row) {
   #Exclude the marker name and missing data
@@ -45,14 +71,14 @@ calculate_maf = function(row) {
 }
 #Appling the function to each row and store the result in the maf
 maf = apply(data[, -1], 1, calculate_maf)  # excluding the first column with marker names and looping over each row.
-data$maf = maf #updating new column with maf in excell sheet.
+out$maf = maf #updating new column with maf in excell sheet.
 #Saving the data frame with the new 'missing_rate' and 'maf' columns to a new CSV file
-write.csv(data, file = "cache/updated_ng_rice_snp.csv", row.names = FALSE, quote = FALSE, )
+write.csv(out[,-2], file = "cache/res_mr_maf.csv", row.names = FALSE, quote = FALSE)
 
 ```
 
-Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
-
-When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
-
-The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+```{r}
+pdf("graphs/maf.pdf", height=5, width=5)
+hist(out$maf, breaks=50, col="blue", xlab="MAF", main="Allele freq")
+dev.off()
+```
