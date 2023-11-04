@@ -1,0 +1,46 @@
+---
+title: "PCA"
+author: "SUBHASH MAHAMKALI"
+date: "11/1/2023"
+output:
+  word_document: default
+  html_notebook: default
+  pdf_document: defaul
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir=normalizePath('../../')) 
+library(stats)
+```
+# Data description
+
+In this dataset, we have n=1503 individuals and n=1094 SNPs
+The SNP coding here is 0,1,2 and "-" indicates NA
+
+```{r, eval=TRUE}
+data <- read.csv("cache/updated_ng_rice_snp.csv")
+```
+
+
+
+#Filter out markers with high missing rate and low MAF
+```{r}
+threshold_missing = 0.10  # remove markers with > 10% missing data
+threshold_maf = 0.05      # remove markers with MAF < 5%
+clean_data =data[data$missing_rate <= threshold_missing & data$maf >= threshold_maf, ]
+```
+
+# 2. Prepare the data matrix for PCA
+```{r}
+genotype_matrix <- as.matrix(clean_data[, -c(1, ncol(clean_data)-1, ncol(clean_data))])
+genotype_matrix[genotype_matrix == "-"] <- NA
+genotype_matrix <- matrix(as.numeric(genotype_matrix), ncol = ncol(genotype_matrix))
+genotype_matrix <- genotype_matrix[, apply(genotype_matrix, 2, var, na.rm = TRUE) > 0]
+```
+
+# 3. Perform PCA
+```{r}
+pca_result <- prcomp(t(genotype_matrix), center = TRUE, scale. = TRUE)
+```
+
