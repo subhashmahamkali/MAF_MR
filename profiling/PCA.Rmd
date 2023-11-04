@@ -1,7 +1,7 @@
 ---
 title: "PCA"
 author: "SUBHASH MAHAMKALI"
-date: "11/1/2023"
+date: "11/01/2023"
 output:
   word_document: default
   html_notebook: default
@@ -15,13 +15,13 @@ library(stats)
 ```
 # Data description
 
-In this dataset, we have n=1503 individuals and n=1094 SNPs
+In this data set, we have n=1503 individuals and n=1094 SNPs
 The SNP coding here is 0,1,2 and "-" indicates NA
+here this data set also has MAF and missing rate values.
 
 ```{r, eval=TRUE}
 data <- read.csv("cache/updated_ng_rice_snp.csv")
 ```
-
 
 
 #Filter out markers with high missing rate and low MAF
