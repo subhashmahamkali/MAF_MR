@@ -1,0 +1,12 @@
+---
+title: "PCA, Test"
+author: "SUBHASH MAHAMKALI"
+date: "11/4/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#testing to learn to coommit the new created file. TY
