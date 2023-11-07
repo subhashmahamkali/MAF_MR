@@ -1,0 +1,127 @@
+---
+title: "Conduct my first SNP calling"
+output: NULL
+date: 11-7-2023
+name: 
+---
+
+# Downloaded the raw data files.
+
+You can also provide the paper describing the data.
+
+because the data is so large, to test it, I obtained 10 genotypes out of n=400.
+- learn how to handle large datasets using Globus and [handling data section](https://hcc.unl.edu/docs/handling_data/) 
+
+```{bash}
+cd largedata; mkdir testdata; cd testdata
+wget -nc ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR801/005/ERR8017465/ERR8017465_2.fastq.gz
+wget -nc ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR801/007/ERR8017447/ERR8017447_2.fastq.gz
+wget -nc ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR801/004/ERR8017474/ERR8017474_2.fastq.gz
+wget -nc ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR801/003/ERR8017473/ERR8017473_2.fastq.gz
+wget -nc ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR801/005/ERR8017475/ERR8017475_2.fastq.gz
+wget -nc ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR801/000/ERR8017470/ERR8017470_1.fastq.gz
+wget -nc ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR801/009/ERR8017479/ERR8017479_2.fastq.gz
+wget -nc ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR801/000/ERR8017470/ERR8017470_2.fastq.gz
+wget -nc ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR801/008/ERR8017478/ERR8017478_2.fastq.gz
+wget -nc ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR801/003/ERR8017473/ERR8017473_1.fastq.gz
+wget -nc ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR801/007/ERR8017447/ERR8017447_1.fastq.gz
+wget -nc ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR801/008/ERR8017468/ERR8017468_2.fastq.gz
+wget -nc ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR801/003/ERR8017463/ERR8017463_1.fastq.gz
+wget -nc ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR801/009/ERR8017479/ERR8017479_1.fastq.gz
+wget -nc ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR801/003/ERR8017463/ERR8017463_2.fastq.gz
+wget -nc ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR801/005/ERR8017465/ERR8017465_1.fastq.gz
+wget -nc ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR801/008/ERR8017478/ERR8017478_1.fastq.gz
+wget -nc ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR801/004/ERR8017474/ERR8017474_1.fastq.gz
+wget -nc ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR801/008/ERR8017468/ERR8017468_1.fastq.gz
+wget -nc ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR801/005/ERR8017475/ERR8017475_1.fastq.gz
+```
+
+# Checked the quality of raw data downloaded.
+
+to test run, we will need to get computational node
+
+```{bash}
+srun --qos=short --nodes=1 --licenses=common --ntasks=4 --mem 32G --time 6:00:00 --pty bash
+```
+
+```{bash}
+module load fastqc/0.11 multiqc/py37/1.8 
+mkdir -p QA MultiQC
+fastqc *.fastq.gz -o QA/
+multiqc -o MultiQC -v QA
+```
+
+
+### prepare a slurm script
+
+```{bash}
+#!/bin/bash
+#SBATCH -D /common/jyanglab/jyang21/coworker/MAF_MR
+#SBATCH -o /common/jyanglab/jyang21/coworker/MAF_MR/slurm-log/testout-%j.txt
+#SBATCH -e /common/jyanglab/jyang21/coworker/MAF_MR/slurm-log/error-%j.txt
+#SBATCH -J tw
+set -e
+set -u
+
+
+module load fastqc/0.11 multiqc/py37/1.8 
+cd largedata/testdata
+mkdir -p QA MultiQC
+fastqc *.fastq.gz -o QA/
+multiqc -o MultiQC -v QA
+
+```
+
+
+
+
+
+
+
+------------------------
+
+#used trimglaore to filter the low quality reads that is less than 30 phredscore.
+#later used multiQC to aggregate the and visulalize quality control results.
+
+module load trim_galore/0.6 cutadapt/2.8
+mkdir -p trimmed
+trim_galore --q 30 --fastqc --fastqc_args "-o QA" --illumina --length 50 --max_n 0 --output trimmed rawdata/ERR8017478_1.fastq.gz rawdata/ERR8017478_2.fastq.gz rawdata/ERR8017479_1.fastq.gz rawdata/ERR8017479_2.fastq.gz
+multiqc -o MultiQC -v QA trimmed
+
+#later downloaded the refrence genome from JGI
+#using this link https://data.jgi.doe.gov/refine-download/phytozome?organism=Sbicolor&project=sorghumpan&_gl=1*iqrlda*_ga*MjEzMjg5ODk0OS4xNjk4OTM4NDM1*_ga_YBLMHYR3C2*MTY5OTMwNDg2My43LjEuMTY5OTMwNTAwOS4wLjAuMA..&cart=true&expanded=Phytozome-454
+
+#aligned the quality filtered reads with the refrence genome using BWA(Burrows wheeler Aligner) aligner tool.
+module load bwa
+
+#indexing the refrence genome
+bwa index /work/jyanglab/subhash/2calling_snps/refrence/Phytozome/PhytozomeV13/Sbicolor/v5.1/assembly/Sbicolor_730_v5.0.fa.gz 
+
+#Aligning the reads
+bwa mem -t 8 $REF ${FQDIR}/${SAMPLE}_1_trimmed.fq.gz ${FQDIR}/${SAMPLE}_2_trimmed.fq.gz | gzip > ${OUTDIR}/${SAMPLE}.sam.gz
+
+#later converted the .sam to .bam format ( binary alignment matrix)
+module load samtools
+# Define the directory where your .sam.gz files are
+OUTDIR="/work/jyanglab/subhash/trimmed_readss/output_alignment"
+# Get a list of .sam.gz files and pick the file corresponding.
+SAMFILES=($(ls ${OUTDIR}/*.sam.gz))
+SAMFILE=${SAMFILES[$SLURM_ARRAY_TASK_ID-1]}
+# Extract the base name for output.
+BASENAME=$(basename ${SAMFILE} .sam.gz)
+# Convert SAM to BAM, sort it, and then index it
+samtools view -@ 8 -bS ${SAMFILE} | samtools sort -@ 8 -o ${OUTDIR}/${BASENAME}.sorted.bam
+samtools index ${OUTDIR}/${BASENAME}.sorted.bam
+
+#used bcftools to call variants
+module load bcftools
+#variant calling.
+bcftools mpileup -Ou -f /work/jyanglab/subhash/trimmed_readss/reference/Phytozome/PhytozomeV12/Sbicolor/assembly/Sbicolor_454_v3.0.1.hardmasked.fa /work/jyanglab/subhash/trimmed_readss/outpu
+t_alignment/BAM_files/ERR8017475.sorted.bam | bcftools call -vmO z -o ERR8017475.vcf.gz
+
+#later filtered the .vcf files generated
+#the quality should be greater than 10. and depeth of the coverage(DP) must be greater than 5. that is number of times a piece of DNA was read during sequence.
+bcftools filter -s LOWQUAL -g3 -G10 -i'%QUAL>10 && DP>5' ERR8017447.vcf.gz -O z -o ERR8017447.filtered.vcf.gz
+
+
+
