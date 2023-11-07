@@ -1,0 +1,24 @@
+#used vcf tools to calculate Fst(fixation index) measure of genetic diversity between 2 populations.
+#created 2 .txt files for pop_1 and pop_2.
+
+vcftools --gzvcf SAP.raw.vcf.gz --weir-fst-pop population1.txt --weir-fst-pop population2.txt --out fst_between_pop1_and_pop2
+
+used below .R code to generate manhattan plot.
+my_data <- read.table('fst_between_pop1_and_pop2.txt', header = TRUE, sep = "\t", check.names = FALSE, stringsAsFactors = FALSE)
+# Convert the 'CHROM' column to a factor for plotting purposes
+my_data$CHROM <- factor(my_data$CHROM)
+# Ensure 'POS' is numeric (if it's not an integer already)
+my_data$POS <- as.numeric(my_data$POS)
+# Fst values should be numeric. NaN values can be converted to NA if necessary.
+my_data$WEIR_AND_COCKERHAM_FST <- as.numeric(as.character(my_data$WEIR_AND_COCKERHAM_FST))
+# Now, remove the rows with -nan or other non-numeric values in the FST column to avoid plotting issues.
+my_data <- my_data[!is.nan(my_data$WEIR_AND_COCKERHAM_FST),]
+
+
+# used ggplot to plot manhattan plot.
+my_plot <- ggplot(my_data, aes(x = CHROM, y = WEIR_AND_COCKERHAM_FST)) +
+  geom_point(alpha = 0.6, size = 1.5) + scale_colour_manual(values = rainbow(length(unique(my_data$CHROM)))) +
+  theme_minimal() + theme(legend.position = "none") + labs(x = "Position", y = "Fst Value", title = "Manhattan Plot of Fst Values") +
+  facet_wrap(~CHROM, scales = 'free_x')
+# Save the plot to a PDF file
+ggsave("my_manhattan_plot.pdf", plot = my_plot, device = "pdf", path = "/work/jyanglab/subhash/VCF", width = 11, height = 8.5, units = "in")
